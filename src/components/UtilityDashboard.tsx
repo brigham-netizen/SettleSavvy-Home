@@ -54,6 +54,15 @@ export default function UtilityDashboard({ report }: Props) {
 
               <p className="text-gray-900 font-semibold text-base leading-snug">{provider.name}</p>
 
+              {provider.notes && (
+                <a
+                  href={`tel:${provider.notes}`}
+                  className="text-xs text-gray-400 hover:text-gray-600"
+                >
+                  {provider.notes}
+                </a>
+              )}
+
               {provider.estimatedMonthlyCost !== null && (
                 <p className="text-2xl font-bold text-gray-900">
                   {provider.estimatedMonthlyCost.toFixed(2)}

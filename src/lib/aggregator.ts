@@ -1,6 +1,7 @@
 import { geocodeAddress } from './geocoding';
 import { getElectricityTrend, getGasTrend } from './eia';
 import { getInternetProviders } from './broadband';
+import { getElectricityProvider } from './wattbuy';
 import { searchUtilityProvider } from './search';
 import { UtilityReport, UtilityProvider } from '@/types/utilities';
 
@@ -61,27 +62,28 @@ const DMV_URLS: Record<string, string> = {
 export async function buildUtilityReport(rawAddress: string): Promise<UtilityReport> {
   const geo = await geocodeAddress(rawAddress);
 
-  const [electricityTrend, gasTrend, internetProviders] = await Promise.all([
+  const [electricityTrend, gasTrend, internetProviders, wattbuyProvider] = await Promise.all([
     getElectricityTrend(geo.state),
     getGasTrend(geo.state),
     getInternetProviders(geo.lat, geo.lng),
+    getElectricityProvider(geo.lat, geo.lng),
   ]);
 
-  const [waterResults, trashResults, electricResults, gasResults] = await Promise.all([
+  const [waterResults, trashResults, gasResults] = await Promise.all([
     searchUtilityProvider(`${geo.city} ${geo.state} water utility start service`),
     searchUtilityProvider(`${geo.city} ${geo.state} trash garbage collection signup`),
-    searchUtilityProvider(`${geo.city} ${geo.county} ${geo.state} electric utility provider start service`),
     searchUtilityProvider(`${geo.city} ${geo.state} natural gas utility provider start service`),
   ]);
 
   const municipalProviders: UtilityProvider[] = [
     {
       category: 'electricity',
-      name: electricResults[0]?.title ?? `${geo.state} Electric Utility`,
+      name: wattbuyProvider?.name ?? `${geo.state} Electric Utility`,
       estimatedMonthlyCost: electricityTrend[0]?.averageCost ?? null,
       costUnit: '¢/kWh',
-      confidence: electricResults.length > 0 ? 'confirmed' : 'estimated',
-      serviceStartUrl: electricResults[0]?.url ?? null,
+      confidence: wattbuyProvider ? 'confirmed' : 'estimated',
+      serviceStartUrl: wattbuyProvider?.website ?? null,
+      notes: wattbuyProvider?.phone ?? undefined,
     },
     {
       category: 'gas',
